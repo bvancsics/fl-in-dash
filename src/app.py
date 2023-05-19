@@ -10,9 +10,15 @@ import pandas as pd
 import plotly.express as px
 from dash import dash_table, dcc, html
 import flask
+import psycopg2
+import pandas as pd
+from sqlalchemy import create_engine
+import os
 
 
-csv_path = '../data/combined.csv'
+
+#csv_path = '../data/combined.csv'
+#csv_path = 'https://www.inf.u-szeged.hu/~vancsics/combined.zip'
 
 # oszlopnev, amely szerinti a minimum elemeket tartjuk meg ha a filtered_aspect = True
 aspect = 'Depth' #  'Tarantula-hit'
@@ -22,6 +28,30 @@ label_1 = "Csak a legkisebb " + aspect + " erteku eseteket vegyuk figyelembe (eg
 label_2 = "A legkisebb " + aspect + " erteku eseteket kozul csak egyet vegyunk figyelembe (egy bug-on belul)"
 label_3 = "Jeloljuk ki az alabbi projekte(ke)t"
 label_4 = "A kijelolt projekte(ke)t..."
+
+
+def get_projects():
+    alchemyEngine = create_engine(
+        'postgresql://' + str(os.environ['POSTGRESQL_USER']) + ':' + str(os.environ['POSTGRESQL_PWD']) + '@' + str(
+            os.environ['POSTGRESQL_HOST']) + '/' + str(os.environ['POSTGRESQL_DB']) + '', pool_recycle=1000000)
+    dbConnection = alchemyEngine.connect()
+    df = pd.read_sql("select distinct \"Project\" from \"Data\"", dbConnection)
+    dbConnection.close()
+    return df['Project'].to_list()
+
+
+def get_df():
+    alchemyEngine = create_engine(
+        'postgresql://' + str(os.environ['POSTGRESQL_USER']) + ':' + str(os.environ['POSTGRESQL_PWD']) + '@' + str(
+            os.environ['POSTGRESQL_HOST']) + '/' + str(os.environ['POSTGRESQL_DB']) + '', pool_recycle=1000000)
+    dbConnection = alchemyEngine.connect()
+
+    df = pd.read_sql("select * from \"Data\"", dbConnection)
+    dbConnection.close()
+    df = df.rename(columns={"Tarantula_hit": "Tarantula-hit",
+                            "Tarantula_freq_ef_ep_nf_np": "Tarantula-freq-ef_ep_nf_np"})
+    return df
+
 
 def drop_duplicates_in_df(df, drop_duplicated):
     if drop_duplicated:
@@ -184,7 +214,7 @@ app.layout = dbc.Row([
 
     html.P([
         html.Label(label_3),
-        dcc.Dropdown(sorted(list(set(pd.read_csv(csv_path)['Project'].tolist()))),
+        dcc.Dropdown(sorted(get_projects()),
                      placeholder='projektek...', id='selected_project_list', multi=True),
     ], style={"width": "35%"}),
 
@@ -226,7 +256,7 @@ def display_output(filtered_aspect, drop_duplicated, selected_project_list, acti
     if selected_project_list is None or selected_project_list == '':
         selected_project_list = []
 
-    df = pd.read_csv(csv_path)
+    df = get_df()
     df['Tarantula-hit'] = df['Tarantula-hit'].astype(float)
     df['Depth'] = df['Depth'].astype(int)
     df = df.sort_values(by=['Project', 'Bug', 'Depth', 'Tarantula-hit'])
