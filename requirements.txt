@@ -9,3 +9,4 @@ plotly==5.14.1
 gunicorn
 dash-tools
 sqlalchemy==1.4.45
+psycopg2==2.9.6
