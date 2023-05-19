@@ -10,7 +10,6 @@ import pandas as pd
 import plotly.express as px
 from dash import dash_table, dcc, html
 import flask
-import psycopg2
 import pandas as pd
 from sqlalchemy import create_engine
 import os
