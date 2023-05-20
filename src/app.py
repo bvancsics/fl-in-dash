@@ -18,6 +18,7 @@ import os
 
 #csv_path = '../data/combined.csv'
 #csv_path = 'https://www.inf.u-szeged.hu/~vancsics/combined.zip'
+csv_path = '../data/combined_without_Closure_34.zip'
 
 # oszlopnev, amely szerinti a minimum elemeket tartjuk meg ha a filtered_aspect = True
 aspect = 'Depth' #  'Tarantula-hit'
@@ -30,23 +31,12 @@ label_4 = "A kijelolt projekte(ke)t..."
 
 
 def get_projects():
-    alchemyEngine = create_engine(
-        'postgresql://' + str(os.environ['POSTGRESQL_USER']) + ':' + str(os.environ['POSTGRESQL_PWD']) + '@' + str(
-            os.environ['POSTGRESQL_HOST']) + '/' + str(os.environ['POSTGRESQL_DB']) + '', pool_recycle=1000000)
-    dbConnection = alchemyEngine.connect()
-    df = pd.read_sql("select distinct \"Project\" from \"Data\"", dbConnection)
-    dbConnection.close()
+    df = pd.read_csv(csv_path)
     return df['Project'].to_list()
 
 
 def get_df():
-    alchemyEngine = create_engine(
-        'postgresql://' + str(os.environ['POSTGRESQL_USER']) + ':' + str(os.environ['POSTGRESQL_PWD']) + '@' + str(
-            os.environ['POSTGRESQL_HOST']) + '/' + str(os.environ['POSTGRESQL_DB']) + '', pool_recycle=1000000)
-    dbConnection = alchemyEngine.connect()
-
-    df = pd.read_sql("select * from \"Data\"", dbConnection)
-    dbConnection.close()
+    df = pd.read_csv(csv_path)
     df = df.rename(columns={"Tarantula_hit": "Tarantula-hit",
                             "Tarantula_freq_ef_ep_nf_np": "Tarantula-freq-ef_ep_nf_np"})
     return df
