@@ -67,12 +67,16 @@ def df_from_file():
 
 
 def get_projects():
+    if 'DATA_SOURCE' not in os.environ:
+        return projects_from_file()
     if os.environ['DATA_SOURCE'] == 'file':
         return projects_from_file()
     return project_from_db()
 
 
 def get_df():
+    if 'DATA_SOURCE' not in os.environ:
+        return df_from_file()
     if os.environ['DATA_SOURCE'] == 'file':
         return df_from_file()
     return df_from_db()
