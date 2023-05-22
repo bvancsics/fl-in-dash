@@ -30,16 +30,52 @@ label_3 = "Jeloljuk ki az alabbi projekte(ke)t"
 label_4 = "A kijelolt projekte(ke)t..."
 
 
-def get_projects():
+
+def project_from_db():
+    alchemy_engine = create_engine(
+        'postgresql://' + str(os.environ['POSTGRESQL_USER']) + ':' + str(os.environ['POSTGRESQL_PWD']) + '@' + str(
+            os.environ['POSTGRESQL_HOST']) + '/' + str(os.environ['POSTGRESQL_DB']) + '', pool_recycle=1000000)
+    db_connection = alchemy_engine.connect()
+    df = pd.read_sql("select distinct \"Project\" from \"Data\"", db_connection)
+    db_connection.close()
+    return df['Project'].to_list()
+
+
+def projects_from_file():
     df = pd.read_csv(csv_path)
     return df['Project'].to_list()
 
 
-def get_df():
+def df_from_db():
+    alchemy_engine = create_engine(
+        'postgresql://' + str(os.environ['POSTGRESQL_USER']) + ':' + str(os.environ['POSTGRESQL_PWD']) + '@' + str(
+            os.environ['POSTGRESQL_HOST']) + '/' + str(os.environ['POSTGRESQL_DB']) + '', pool_recycle=1000000)
+    db_connection = alchemy_engine.connect()
+
+    df = pd.read_sql("select * from \"Data\"", db_connection)
+    db_connection.close()
+    df = df.rename(columns={"Tarantula_hit": "Tarantula-hit",
+                            "Tarantula_freq_ef_ep_nf_np": "Tarantula-freq-ef_ep_nf_np"})
+    return df
+
+
+def df_from_file():
     df = pd.read_csv(csv_path)
     df = df.rename(columns={"Tarantula_hit": "Tarantula-hit",
                             "Tarantula_freq_ef_ep_nf_np": "Tarantula-freq-ef_ep_nf_np"})
     return df
+
+
+def get_projects():
+    if os.environ['DATA_SOURCE'] == 'file':
+        return projects_from_file()
+    return project_from_db()
+
+
+def get_df():
+    if os.environ['DATA_SOURCE'] == 'file':
+        return df_from_file()
+    return df_from_db()
 
 
 def drop_duplicates_in_df(df, drop_duplicated):
@@ -191,8 +227,11 @@ app = dash.Dash(__name__)
 server = app.server
 
 app.layout = dbc.Row([
+    dcc.Input(id='hidden', placeholder='value', value='value', style={'display': 'none'}),
+    dcc.Store(id='store_df'),
+
     html.P([
-        html.Label(label_1),
+        html.Label(label_1, id='label1'),
         dcc.Dropdown(['Igen', 'Nem'], placeholder='Igen / Nem', id='filtered_aspect')
     ], style={"width": "35%"}),
 
@@ -225,6 +264,13 @@ app.layout = dbc.Row([
 
 
 
+@app.callback(
+    Output('store_df', 'data'),
+    Input('hidden', 'value')
+)
+def read_data(value):
+    return get_df().to_json()
+
 
 @app.callback(
     Output('output', 'children'),
@@ -232,10 +278,11 @@ app.layout = dbc.Row([
      Input('drop_duplicated', 'value'),
      Input('selected_project_list', 'value'),
      Input('action_selected_project', 'value'),
-     Input('tabs-example-1', 'value')
+     Input('tabs-example-1', 'value'),
+     Input('store_df', 'data')
      ]
 )
-def display_output(filtered_aspect, drop_duplicated, selected_project_list, action_selected_project, tab):
+def display_output(filtered_aspect, drop_duplicated, selected_project_list, action_selected_project, tab, df):
     if (filtered_aspect is None or filtered_aspect == '') and (drop_duplicated is None or drop_duplicated == ''):
         return ''
 
@@ -245,7 +292,7 @@ def display_output(filtered_aspect, drop_duplicated, selected_project_list, acti
     if selected_project_list is None or selected_project_list == '':
         selected_project_list = []
 
-    df = get_df()
+    df = pd.read_json(df)
     df['Tarantula-hit'] = df['Tarantula-hit'].astype(float)
     df['Depth'] = df['Depth'].astype(int)
     df = df.sort_values(by=['Project', 'Bug', 'Depth', 'Tarantula-hit'])
