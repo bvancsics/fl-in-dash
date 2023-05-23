@@ -43,7 +43,7 @@ def project_from_db():
 
 def projects_from_file():
     df = pd.read_csv(csv_path)
-    return df['Project'].to_list()
+    return sorted(df['Project'].unique())
 
 
 def df_from_db():
